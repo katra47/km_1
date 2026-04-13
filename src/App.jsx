@@ -8,6 +8,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 function App() {
   const [hora, setHora] = useState(new Date());
   const [alertas, setAlertas] = useState([]);
+  const [regionActiva, setRegionActiva] = useState("TODAS");
 
   const regiones = ["Cor", "Nor", "Pet"];
 
@@ -30,7 +31,7 @@ function App() {
     return { color: "success", texto: "OK" };
   };
 
-  // 🔥 ALERTAS EN TIEMPO REAL (FIX IMPORTANTE)
+  // 🔥 ALERTAS (solo URGENTES)
   useEffect(() => {
     const unsubscribes = [];
 
@@ -40,40 +41,24 @@ function App() {
       const unsubscribe = onValue(referencia, (snapshot) => {
         const data = snapshot.val();
 
-        let todasRegiones = [];
+        if (!data) return;
 
-        regiones.forEach((r) => {
-          const refRegion = ref(db, `registros/${r}`);
+        setAlertas((prev) => {
+          let otras = prev.filter((x) => x.region !== region);
 
-          onValue(refRegion, (snap) => {
-            const d = snap.val();
+          const lista = Object.values(data).map((item) => {
+            const estado = getSemaforo(item.restante);
 
-            if (d) {
-              const lista = Object.values(d).map((item) => {
-                const estado = getSemaforo(item.restante);
-
-                return {
-                  ...item,
-                  region: r,
-                  estado,
-                };
-              });
-
-              todasRegiones = [...todasRegiones, ...lista];
-
-              const filtradas = todasRegiones.filter(
-                (x) =>
-                  x.estado.color === "danger" ||
-                  x.estado.color === "warning"
-              );
-
-              filtradas.sort(
-                (a, b) => new Date(b.fecha) - new Date(a.fecha)
-              );
-
-              setAlertas([...filtradas]);
-            }
+            return {
+              ...item,
+              region,
+              estado,
+            };
           });
+
+          const todas = [...otras, ...lista];
+
+          return todas.filter((x) => x.estado.color === "danger");
         });
       });
 
@@ -85,7 +70,17 @@ function App() {
     };
   }, []);
 
-  // 📥 EXCEL HISTORIAL COMPLETO
+  // 🔥 FILTRO POR REGIÓN
+  const alertasFiltradas =
+    regionActiva === "TODAS"
+      ? alertas
+      : alertas.filter((a) => a.region === regionActiva);
+
+  // 🔢 CONTADORES
+  const contarPorRegion = (region) =>
+    alertas.filter((a) => a.region === region).length;
+
+  // 📥 EXCEL
   const descargarExcel = () => {
     const historialRef = ref(db, "historial");
 
@@ -97,13 +92,12 @@ function App() {
 
         let datos = [];
 
-        Object.keys(data).forEach((ut) => {
-          const registrosUT = data[ut];
-
-          Object.values(registrosUT).forEach((r) => {
+        Object.keys(data).forEach((placa) => {
+          Object.values(data[placa]).forEach((r) => {
             datos.push({
-              UT: ut,
+              Placa: placa,
               Supervisor: r.supervisor,
+              Editor: r.editor || "-",
               Km_Actual: r.kmInicial,
               Km_Servicio: r.kmServicio,
               Restante: r.restante,
@@ -113,13 +107,9 @@ function App() {
           });
         });
 
-        datos.sort((a, b) => new Date(b.Fecha) - new Date(a.Fecha));
-
         const hoja = XLSX.utils.json_to_sheet(datos);
         const libro = XLSX.utils.book_new();
-
         XLSX.utils.book_append_sheet(libro, hoja, "Historial");
-
         XLSX.writeFile(libro, "historial_completo_stcom.xlsx");
       },
       { onlyOnce: true }
@@ -129,50 +119,65 @@ function App() {
   return (
     <div className="container text-center mt-5">
 
-      {/* CARD PRINCIPAL */}
+      {/* CARD */}
       <div className="card shadow-lg p-4">
+        <h1>📊 Registro de Km STCOM</h1>
+        <h5>🕒 {hora.toLocaleString()}</h5>
 
-        <h1 className="mb-3">📊 Registro de Km STCOM</h1>
-
-        <p className="text-muted">
-          Sistema de control de kilometraje en tiempo real
-        </p>
-
-        <h5 className="mb-3">🕒 {hora.toLocaleString()}</h5>
-
-        {/* BOTONES REGIONES */}
-        <div className="d-flex justify-content-center gap-3">
-          <Link to="/cor"><button className="btn btn-primary px-4">COR</button></Link>
-          <Link to="/nor"><button className="btn btn-success px-4">NOR</button></Link>
-          <Link to="/pet"><button className="btn btn-warning px-4">PET</button></Link>
+        <div className="d-flex justify-content-center gap-3 flex-wrap mt-3">
+          <Link to="/cor"><button className="btn btn-primary">COR</button></Link>
+          <Link to="/nor"><button className="btn btn-success">NOR</button></Link>
+          <Link to="/pet"><button className="btn btn-warning">PET</button></Link>
         </div>
 
-        {/* EXCEL */}
-        <div className="d-flex justify-content-center mt-4">
-          <button
-            className="btn btn-dark px-5 shadow"
-            onClick={descargarExcel}
-          >
-            📥 Descargar Historial Excel
-          </button>
-        </div>
-
+        <button
+          className="btn btn-dark mt-4"
+          onClick={descargarExcel}
+        >
+          📥 Excel
+        </button>
       </div>
 
-      {/* ALERTAS */}
+      {/* 🔥 BOTONES DE ALERTAS */}
       <div className="mt-5">
-        <h4>⚠️ Unidades en alerta</h4>
 
-        {alertas.length === 0 ? (
-          <p className="text-muted">Todo está en buen estado ✅</p>
+        <h4>🚨 Alertas por región</h4>
+
+        <div className="d-flex justify-content-center gap-3 flex-wrap mt-3">
+
+          <button
+            className={`btn ${regionActiva === "TODAS" ? "btn-dark" : "btn-outline-dark"}`}
+            onClick={() => setRegionActiva("TODAS")}
+          >
+            TODAS ({alertas.length})
+          </button>
+
+          {regiones.map((r) => (
+            <button
+              key={r}
+              className={`btn ${
+                regionActiva === r ? "btn-danger" : "btn-outline-danger"
+              }`}
+              onClick={() => setRegionActiva(r)}
+            >
+              {r} ({contarPorRegion(r)})
+            </button>
+          ))}
+
+        </div>
+
+        {/* TABLA */}
+        {alertasFiltradas.length === 0 ? (
+          <p className="text-muted mt-3">Sin alertas en esta región ✅</p>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-bordered table-hover text-center">
+          <div className="table-responsive mt-3">
+            <table className="table table-bordered text-center">
               <thead className="table-dark">
                 <tr>
                   <th>Región</th>
-                  <th>UT</th>
+                  <th>Placa</th>
                   <th>Supervisor</th>
+                  <th>Editor</th>
                   <th>Km Actual</th>
                   <th>Km Servicio</th>
                   <th>Restante</th>
@@ -181,11 +186,12 @@ function App() {
               </thead>
 
               <tbody>
-                {alertas.map((r, i) => (
+                {alertasFiltradas.map((r, i) => (
                   <tr key={i} className={`table-${r.estado.color}`}>
                     <td>{r.region}</td>
-                    <td>{r.ut}</td>
+                    <td>{r.placa}</td>
                     <td>{r.supervisor}</td>
+                    <td>{r.editor || "-"}</td>
                     <td>{r.kmInicial}</td>
                     <td>{r.kmServicio}</td>
                     <td>{r.restante}</td>
@@ -200,8 +206,8 @@ function App() {
             </table>
           </div>
         )}
-      </div>
 
+      </div>
     </div>
   );
 }

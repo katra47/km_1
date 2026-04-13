@@ -1,4 +1,3 @@
-// main.jsx
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -11,17 +10,19 @@ import App from './App.jsx'
 import Cor from './Regiones/Cor.jsx'
 import Nor from './Regiones/Nor.jsx'
 import Pet from './Regiones/Pet.jsx'
-import NavBar from './NavBar.jsx'   // Importamos el NavBar
+import NavBar from './NavBar.jsx'
+import Admin from './Regiones/Admin.jsx' // 🔥 IMPORTANTE
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <NavBar />   {/* Aquí se muestra el menú de navegación */}
+      <NavBar />
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/cor" element={<Cor />} />
         <Route path="/nor" element={<Nor />} />
         <Route path="/pet" element={<Pet />} />
+        <Route path="/admin" element={<Admin />} /> {/* 🔐 protegido */}
       </Routes>
     </BrowserRouter>
   </StrictMode>

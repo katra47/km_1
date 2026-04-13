@@ -1,4 +1,3 @@
-// src/NavBar.jsx
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 
@@ -14,12 +13,10 @@ export default function NavBar() {
   return (
     <nav className="navbar navbar-dark bg-dark shadow-sm px-3">
 
-      {/* Logo */}
       <span className="navbar-brand fw-bold">
         📊 STCOM
       </span>
 
-      {/* Botón móvil */}
       <button
         className="btn btn-outline-light d-md-none"
         onClick={() => setOpen(!open)}
@@ -27,7 +24,6 @@ export default function NavBar() {
         ☰
       </button>
 
-      {/* Links */}
       <div
         className={`w-100 d-md-flex flex-md-row flex-column align-items-md-center justify-content-end gap-2 mt-2 mt-md-0 ${
           open ? "d-flex" : "d-none d-md-flex"
@@ -48,6 +44,10 @@ export default function NavBar() {
 
         <NavLink to="/pet" className={linkClass} onClick={closeMenu}>
           Pet
+        </NavLink>
+
+        <NavLink to="/admin" className={linkClass} onClick={closeMenu}>
+          Admin
         </NavLink>
 
       </div>
