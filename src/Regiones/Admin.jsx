@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { db } from "../firebase";
-import { ref, set, get } from "firebase/database";
+import { ref, set, get, push } from "firebase/database";
+import * as XLSX from "xlsx";
 
 export default function Admin() {
   const [autorizado, setAutorizado] = useState(false);
@@ -23,7 +24,16 @@ export default function Admin() {
     }
   };
 
-  // 🚗 CREAR PLACA CON VALIDACIONES
+  // 🚦 SEMÁFORO (para Excel)
+  const getSemaforo = (restante) => {
+    const r = Number(restante);
+
+    if (r <= 500) return "URGENTE";
+    if (r <= 1000) return "PRÓXIMO";
+    return "OK";
+  };
+
+  // 🚗 CREAR PLACA
   const crearPlaca = async () => {
     const placaUpper = placa.trim().toUpperCase();
     const supervisorLimpio = supervisor.trim();
@@ -36,52 +46,83 @@ export default function Admin() {
     const kmInicialNum = Number(kmInicial);
     const kmServicioNum = Number(kmServicio);
 
-    // 🚫 VALIDACIÓN 1: km inicial no negativo
-    if (kmInicialNum < 0) {
-      setError("El km inicial no puede ser negativo");
+    if (kmInicialNum < 0 || kmServicioNum < 0) {
+      setError("Los kilómetros no pueden ser negativos");
       return;
     }
 
-    // 🚫 VALIDACIÓN 2: servicio mayor que inicial
     if (kmServicioNum <= kmInicialNum) {
-      setError("El km de servicio debe ser mayor al km inicial");
+      setError("Km servicio debe ser mayor al inicial");
       return;
     }
 
-    try {
-      // 🔥 VALIDACIÓN CRÍTICA: EXISTE PLACA
-      const placaRef = ref(db, `registros/${region}/${placaUpper}`);
-      const snapshot = await get(placaRef);
+    const placaRef = ref(db, `registros/${region}/${placaUpper}`);
+    const snapshot = await get(placaRef);
 
-      if (snapshot.exists()) {
-        setError("La placa ya existe en esta región");
+    if (snapshot.exists()) {
+      setError("La placa ya existe");
+      return;
+    }
+
+    const data = {
+      supervisor: supervisorLimpio,
+      placa: placaUpper,
+      kmInicial: kmInicialNum,
+      kmServicio: kmServicioNum,
+      restante: kmServicioNum - kmInicialNum,
+      fecha: new Date().toISOString(),
+    };
+
+    await set(placaRef, data);
+
+    setSupervisor("");
+    setPlaca("");
+    setKmInicial("");
+    setKmServicio("");
+    setError("");
+  };
+
+  // 📥 EXCEL (CORREGIDO: usa get, NO onValue)
+  const descargarExcel = async () => {
+    try {
+      const historialRef = ref(db, "historial");
+      const snapshot = await get(historialRef);
+
+      if (!snapshot.exists()) {
+        setError("No hay datos en historial");
         return;
       }
 
-      const data = {
-        supervisor: supervisorLimpio,
-        placa: placaUpper,
-        kmInicial: kmInicialNum,
-        kmServicio: kmServicioNum,
-        restante: kmServicioNum - kmInicialNum,
-        fecha: new Date().toISOString(),
-      };
+      const data = snapshot.val();
+      let datos = [];
 
-      await set(placaRef, data);
+      Object.keys(data).forEach((placa) => {
+        Object.values(data[placa]).forEach((r) => {
+          datos.push({
+            Placa: placa,
+            Supervisor: r.supervisor || "-",
+            Editor: r.editor || "-",
+            Km_Actual: r.kmInicial || 0,
+            Km_Servicio: r.kmServicio || 0,
+            Restante: r.restante || 0,
+            Estado: getSemaforo(r.restante),
+            Fecha: r.fecha || "-",
+          });
+        });
+      });
 
-      // limpiar
-      setSupervisor("");
-      setPlaca("");
-      setKmInicial("");
-      setKmServicio("");
-      setError("");
+      const hoja = XLSX.utils.json_to_sheet(datos);
+      const libro = XLSX.utils.book_new();
 
+      XLSX.utils.book_append_sheet(libro, hoja, "Historial");
+
+      XLSX.writeFile(libro, "historial_stcom.xlsx");
     } catch (err) {
-      setError("Error al guardar en la base de datos");
+      setError("Error al descargar Excel");
     }
   };
 
-  // 🔒 LOGIN
+  // 🔒 LOGIN SCREEN
   if (!autorizado) {
     return (
       <div className="container mt-5 text-center">
@@ -110,6 +151,7 @@ export default function Admin() {
   return (
     <div className="container mt-5">
       <div className="card p-4 shadow">
+
         <h2 className="text-center mb-4">Panel Admin</h2>
 
         {error && <div className="alert alert-danger">{error}</div>}
@@ -160,10 +202,15 @@ export default function Admin() {
           onChange={(e) => setKmServicio(e.target.value)}
         />
 
-        {/* BOTÓN */}
-        <button className="btn btn-success w-100" onClick={crearPlaca}>
+        {/* BOTONES */}
+        <button className="btn btn-success w-100 mb-3" onClick={crearPlaca}>
           Crear Placa
         </button>
+
+        <button className="btn btn-dark w-100" onClick={descargarExcel}>
+          📥 Descargar Excel
+        </button>
+
       </div>
     </div>
   );

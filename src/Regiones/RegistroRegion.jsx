@@ -24,18 +24,22 @@ function RegistroRegion({ nombreRegion }) {
   const [kmDia, setKmDia] = useState("");
   const [nuevoServicio, setNuevoServicio] = useState("");
 
-  // 🔍 BUSCADOR
   const [busqueda, setBusqueda] = useState("");
 
-  // 🚦 SEMÁFORO
+  // 🚦 SEMÁFORO (ACTUALIZADO)
   const getSemaforo = (restante) => {
-    restante = Number(restante);
-    if (restante <= 1000) return { color: "danger", texto: "URGENTE" };
-    if (restante <= 3000) return { color: "warning", texto: "PRÓXIMO" };
+    const r = Number(restante);
+
+    // 🔴 ROJO: -∞ a 500
+    if (r <= 500) return { color: "danger", texto: "URGENTE" };
+
+    // 🟡 AMARILLO: 501 a 1000
+    if (r <= 1000) return { color: "warning", texto: "PRÓXIMO" };
+
+    // 🟢 VERDE: > 1000
     return { color: "success", texto: "OK" };
   };
 
-  // 📅 FECHA
   const obtenerFecha = () => new Date().toISOString();
 
   // 🔄 TIEMPO REAL
@@ -59,23 +63,23 @@ function RegistroRegion({ nombreRegion }) {
     return () => unsubscribe();
   }, [REGION]);
 
-  // 🔍 BUSCAR PLACA PARA ACTUALIZAR
+  // 🔍 BUSCAR PLACA
   const placaEncontrada = registros.find(
     (r) => r.placa === placaBuscar.trim().toUpperCase()
   );
 
-  // 🔍 FILTRO TABLA
+  // 🔍 FILTRO BUSCADOR
   const registrosFiltrados = registros.filter((r) => {
-    const texto = busqueda.toLowerCase();
+    const text = busqueda.toLowerCase();
 
     return (
-      r.placa?.toLowerCase().includes(texto) ||
-      r.supervisor?.toLowerCase().includes(texto) ||
-      r.editor?.toLowerCase().includes(texto)
+      r.placa?.toLowerCase().includes(text) ||
+      r.supervisor?.toLowerCase().includes(text) ||
+      r.editor?.toLowerCase().includes(text)
     );
   });
 
-  // 🔥 ACTUALIZAR
+  // 🔥 ACTUALIZAR PLACA
   const actualizarPlaca = () => {
     const placa = placaBuscar.trim().toUpperCase();
     const editorLimpio = editor.trim();
@@ -97,11 +101,6 @@ function RegistroRegion({ nombreRegion }) {
 
     if (kmDiaNum < kmActual) {
       setError("El km no puede ser menor al actual");
-      return;
-    }
-
-    if (kmDiaNum - kmActual > 1000) {
-      setError("El km ingresado es demasiado alto");
       return;
     }
 
@@ -215,7 +214,7 @@ function RegistroRegion({ nombreRegion }) {
         </div>
       )}
 
-      {/* 🔍 BUSCADOR */}
+      {/* BUSCADOR */}
       <input
         className="form-control mb-3"
         placeholder="🔍 Buscar placa, supervisor o editor..."
