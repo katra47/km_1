@@ -45,17 +45,6 @@ export default function Admin() {
 
     const kmInicialNum = Number(kmInicial);
     const kmServicioNum = Number(kmServicio);
-
-    if (kmInicialNum < 0 || kmServicioNum < 0) {
-      setError("Los kilómetros no pueden ser negativos");
-      return;
-    }
-
-    if (kmServicioNum <= kmInicialNum) {
-      setError("Km servicio debe ser mayor al inicial");
-      return;
-    }
-
     const placaRef = ref(db, `registros/${region}/${placaUpper}`);
     const snapshot = await get(placaRef);
 
