@@ -229,7 +229,7 @@ function RegistroRegion({ nombreRegion }) {
             <tr>
               <th>Supervisor</th>
               <th>Placa</th>
-              <th>Editor</th>
+              <th>Brigada</th>
               <th>Km Actual</th>
               <th>Km Servicio</th>
               <th>Restante</th>
