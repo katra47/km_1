@@ -99,7 +99,7 @@ function RegistroRegion({ nombreRegion }) {
 
     const kmActual = Number(existe.kmInicial);
 
-    if (kmDiaNum < kmActual) {
+    if (kmActual < kmActual) {
       setError("El km no puede ser menor al actual");
       return;
     }
