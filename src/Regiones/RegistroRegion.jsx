@@ -182,7 +182,7 @@ function RegistroRegion({ nombreRegion }) {
 
             <input
               className="form-control mb-3"
-              placeholder="Editor"
+              placeholder="Ingrese su Nombre"
               value={editor}
               onChange={(e) => setEditor(e.target.value)}
             />
