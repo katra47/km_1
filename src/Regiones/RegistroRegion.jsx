@@ -108,7 +108,7 @@ function RegistroRegion({ nombreRegion }) {
       ? Number(nuevoServicio)
       : existe.kmServicio;
 
-    if (kmServicioFinal < kmDiaNum) {
+    if (kmServicioFinal < kmServicioFinal) {
       setError("El km de servicio no puede ser menor al actual");
       return;
     }
