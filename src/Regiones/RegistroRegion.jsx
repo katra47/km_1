@@ -148,7 +148,7 @@ function RegistroRegion({ nombreRegion }) {
         className="btn btn-primary w-100 mb-4"
         onClick={() => setModo("actualizar")}
       >
-        Actualizar Placa
+        Actualizar KM
       </button>
 
       {/* MODAL */}
