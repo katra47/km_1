@@ -26,17 +26,12 @@ function RegistroRegion({ nombreRegion }) {
 
   const [busqueda, setBusqueda] = useState("");
 
-  // 🚦 SEMÁFORO (ACTUALIZADO)
+  // 🚦 SEMÁFORO
   const getSemaforo = (restante) => {
     const r = Number(restante);
 
-    // 🔴 ROJO: -∞ a 500
     if (r <= 500) return { color: "danger", texto: "URGENTE" };
-
-    // 🟡 AMARILLO: 501 a 1000
     if (r <= 1000) return { color: "warning", texto: "PRÓXIMO" };
-
-    // 🟢 VERDE: > 1000
     return { color: "success", texto: "OK" };
   };
 
@@ -79,7 +74,7 @@ function RegistroRegion({ nombreRegion }) {
     );
   });
 
-  // 🔥 ACTUALIZAR PLACA
+  // 🔥 ACTUALIZAR
   const actualizarPlaca = () => {
     const placa = placaBuscar.trim().toUpperCase();
     const editorLimpio = editor.trim();
@@ -87,6 +82,11 @@ function RegistroRegion({ nombreRegion }) {
 
     if (!placa || !editorLimpio || !kmDia) {
       setError("Todos los campos son obligatorios");
+      return;
+    }
+
+    if (isNaN(kmDiaNum) || kmDiaNum < 0) {
+      setError("El km del día debe ser válido");
       return;
     }
 
@@ -98,19 +98,29 @@ function RegistroRegion({ nombreRegion }) {
     }
 
     const kmActual = Number(existe.kmInicial);
+    const kmServicioActual = Number(existe.kmServicio);
 
-    if (kmActual < kmActual) {
-      setError("El km no puede ser menor al actual");
+    if (kmDiaNum < kmActual) {
+      setError("El km del día no puede ser menor al actual");
       return;
     }
 
-    const kmServicioFinal = nuevoServicio
-      ? Number(nuevoServicio)
-      : existe.kmServicio;
+    let kmServicioFinal = kmServicioActual;
 
-    if (kmServicioFinal < kmServicioFinal) {
-      setError("El km de servicio no puede ser menor al actual");
-      return;
+    if (nuevoServicio) {
+      const nuevoServicioNum = Number(nuevoServicio);
+
+      if (isNaN(nuevoServicioNum) || nuevoServicioNum < 0) {
+        setError("El km de servicio debe ser válido");
+        return;
+      }
+
+      if (nuevoServicioNum < kmServicioActual) {
+        setError("El km de servicio no puede ser menor al actual");
+        return;
+      }
+
+      kmServicioFinal = nuevoServicioNum;
     }
 
     const restante = kmServicioFinal - kmDiaNum;
@@ -126,9 +136,7 @@ function RegistroRegion({ nombreRegion }) {
     };
 
     set(ref(db, `registros/${REGION}/${placa}`), data);
-
-    const historialRef = ref(db, `historial/${placa}`);
-    push(historialRef, data);
+    push(ref(db, `historial/${placa}`), data);
 
     setPlacaBuscar("");
     setEditor("");
@@ -140,133 +148,135 @@ function RegistroRegion({ nombreRegion }) {
 
   return (
     <div className="container mt-5">
+      <div className="card shadow-lg p-4 rounded-4">
 
-      <h2 className="text-center mb-4">Región {REGION}</h2>
-
-      {/* BOTÓN */}
-      <button
-        className="btn btn-primary w-100 mb-4"
-        onClick={() => setModo("actualizar")}
-      >
-        Actualizar KM
-      </button>
-
-      {/* MODAL */}
-      {modo && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex justify-content-center align-items-center"
-          onClick={() => setModo("")}
-        >
-          <div
-            className="card p-4 w-100"
-            style={{ maxWidth: "400px" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h4>Actualizar Placa</h4>
-
-            {error && <div className="alert alert-danger">{error}</div>}
-
-            <input
-              className="form-control mb-3"
-              placeholder="Placa"
-              value={placaBuscar}
-              onChange={(e) => setPlacaBuscar(e.target.value)}
-            />
-
-            {placaEncontrada && (
-              <div className="alert alert-info">
-                Km actual: {placaEncontrada.kmInicial} <br />
-                Km servicio: {placaEncontrada.kmServicio}
-              </div>
-            )}
-
-            <input
-              className="form-control mb-3"
-              placeholder="Ingrese su Nombre"
-              value={editor}
-              onChange={(e) => setEditor(e.target.value)}
-            />
-
-            <input
-              className="form-control mb-3"
-              type="number"
-              placeholder="Km del día"
-              value={kmDia}
-              onChange={(e) => setKmDia(e.target.value)}
-            />
-
-            <input
-              className="form-control mb-3"
-              type="number"
-              placeholder="Nuevo Km Servicio (opcional)"
-              value={nuevoServicio}
-              onChange={(e) => setNuevoServicio(e.target.value)}
-            />
-
-            <button
-              className="btn btn-primary w-100"
-              onClick={actualizarPlaca}
-              disabled={!placaEncontrada}
-            >
-              Actualizar
-            </button>
-          </div>
+        {/* HEADER */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h3 className="fw-bold">Región {REGION}</h3>
+          <span className="badge bg-dark px-3 py-2">Control de KM</span>
         </div>
-      )}
 
-      {/* BUSCADOR */}
-      <input
-        className="form-control mb-3"
-        placeholder="🔍 Buscar placa, supervisor o editor..."
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-      />
+        {/* BOTÓN */}
+        <button
+          className="btn btn-primary w-100 mb-4 rounded-3 fw-semibold shadow-sm"
+          onClick={() => setModo("actualizar")}
+        >
+          Actualizar KM
+        </button>
 
-      {/* TABLA */}
-      <div className="table-responsive">
-        <table className="table table-striped text-center">
-          <thead>
-            <tr>
-              <th>Supervisor</th>
-              <th>Placa</th>
-              <th>Brigada</th>
-              <th>Km Actual</th>
-              <th>Km Servicio</th>
-              <th>Restante</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
+        {/* MODAL */}
+        {modo && (
+          <div
+            className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex justify-content-center align-items-center"
+            onClick={() => setModo("")}
+          >
+            <div
+              className="card p-4 rounded-4 shadow-lg"
+              style={{ maxWidth: "400px", width: "100%" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h4 className="mb-3">Actualizar Placa</h4>
 
-          <tbody>
-            {registrosFiltrados.length === 0 ? (
+              {error && <div className="alert alert-danger">{error}</div>}
+
+              <input
+                className="form-control mb-3 rounded-3"
+                placeholder="Placa"
+                value={placaBuscar}
+                onChange={(e) => setPlacaBuscar(e.target.value)}
+              />
+
+              {placaEncontrada && (
+                <div className="alert alert-info">
+                  Km actual: {placaEncontrada.kmInicial} <br />
+                  Km servicio: {placaEncontrada.kmServicio}
+                </div>
+              )}
+
+              <input
+                className="form-control mb-3 rounded-3"
+                placeholder="Ingrese su Nombre"
+                value={editor}
+                onChange={(e) => setEditor(e.target.value)}
+              />
+
+              <input
+                className="form-control mb-3 rounded-3"
+                type="number"
+                placeholder="Km del día"
+                value={kmDia}
+                onChange={(e) => setKmDia(e.target.value)}
+              />
+
+              <input
+                className="form-control mb-3 rounded-3"
+                type="number"
+                placeholder="Nuevo Km Servicio (opcional)"
+                value={nuevoServicio}
+                onChange={(e) => setNuevoServicio(e.target.value)}
+              />
+
+              <button
+                className="btn btn-primary w-100 rounded-3 fw-semibold"
+                onClick={actualizarPlaca}
+                disabled={!placaEncontrada}
+              >
+                Actualizar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* BUSCADOR */}
+        <input
+          className="form-control mb-4 rounded-3 shadow-sm"
+          placeholder="🔍 Buscar placa, supervisor o editor..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+        />
+
+        {/* TABLA */}
+        <div className="table-responsive">
+          <table className="table table-hover align-middle text-center">
+            <thead className="table-dark">
               <tr>
-                <td colSpan="7">No se encontraron resultados</td>
+                <th>Supervisor</th>
+                <th>Placa</th>
+                <th>Brigada</th>
+                <th>Km Actual</th>
+                <th>Km Servicio</th>
+                <th>Restante</th>
+                <th>Estado</th>
               </tr>
-            ) : (
-              registrosFiltrados.map((r, i) => {
-                const estado = getSemaforo(r.restante);
+            </thead>
 
-                return (
-                  <tr key={i} className={`table-${estado.color}`}>
-                    <td>{r.supervisor}</td>
-                    <td>{r.placa}</td>
-                    <td>{r.editor || "-"}</td>
-                    <td>{r.kmInicial}</td>
-                    <td>{r.kmServicio}</td>
-                    <td>{r.restante}</td>
-                    <td>
-                      <span className={`badge bg-${estado.color}`}>
-                        {estado.texto}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+            <tbody>
+              {[...registrosFiltrados]
+                .sort((a, b) => Number(a.restante) - Number(b.restante))
+                .map((r, i) => {
+                  const estado = getSemaforo(r.restante);
+
+                  return (
+                    <tr key={i}>
+                      <td className="py-3">{r.supervisor}</td>
+                      <td className="py-3 fw-semibold">{r.placa}</td>
+                      <td className="py-3">{r.editor || "-"}</td>
+                      <td className="py-3">{r.kmInicial}</td>
+                      <td className="py-3">{r.kmServicio}</td>
+                      <td className="py-3 fw-bold">{r.restante}</td>
+                      <td className="py-3">
+                        <span className={`badge bg-${estado.color} px-3 py-2`}>
+                          {estado.texto}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+
       </div>
-
     </div>
   );
 }

@@ -86,7 +86,7 @@ function App() {
 
       {/* ALERTAS */}
       <div className="mt-5">
-        <h4>🚨 SOLO URGENTES (ROJO)</h4>
+        <h4>🚨 KILOMETRAJES URGENTES</h4>
 
         <div className="d-flex justify-content-center gap-3 flex-wrap mt-3">
 
@@ -113,7 +113,7 @@ function App() {
 
         {alertasFiltradas.length === 0 ? (
           <p className="text-muted mt-3">
-            No hay unidades en rojo 🔴
+            No hay unidades urgentes por el momento 🔴
           </p>
         ) : (
           <div className="table-responsive mt-3">

@@ -7,49 +7,67 @@ export default function NavBar() {
   const closeMenu = () => setOpen(false);
 
   const linkClass = ({ isActive }) =>
-    "nav-link px-3 rounded " +
-    (isActive ? "bg-primary text-white" : "text-light");
+    "nav-link px-3 py-2 rounded-3 fw-semibold d-flex align-items-center gap-1 " +
+    (isActive
+      ? "bg-primary text-white shadow-sm"
+      : "text-light");
 
   return (
-    <nav className="navbar navbar-dark bg-dark shadow-sm px-3">
+    <nav className="navbar navbar-expand-md navbar-dark bg-dark shadow-sm px-3 py-2">
 
-      <span className="navbar-brand fw-bold">
-        📊 STCOM
-      </span>
+      {/* 🔥 LOGO + NOMBRE */}
+      <NavLink
+        to="/"
+        className="navbar-brand d-flex align-items-center gap-2 fw-bold fs-5"
+      >
+        
+        STCOM
+      </NavLink>
 
+      {/* BOTÓN MOBILE */}
       <button
-        className="btn btn-outline-light d-md-none"
+        className="navbar-toggler"
+        type="button"
         onClick={() => setOpen(!open)}
       >
-        ☰
+        <span className="navbar-toggler-icon"></span>
       </button>
 
-      <div
-        className={`w-100 d-md-flex flex-md-row flex-column align-items-md-center justify-content-end gap-2 mt-2 mt-md-0 ${
-          open ? "d-flex" : "d-none d-md-flex"
-        }`}
-      >
+      {/* MENÚ */}
+      <div className={`collapse navbar-collapse ${open ? "show" : ""}`}>
+        <ul className="navbar-nav ms-auto gap-2">
 
-        <NavLink to="/" className={linkClass} onClick={closeMenu}>
-          Inicio
-        </NavLink>
+          <li className="nav-item">
+            <NavLink to="/" className={linkClass} onClick={closeMenu}>
+              Inicio
+            </NavLink>
+          </li>
 
-        <NavLink to="/cor" className={linkClass} onClick={closeMenu}>
-          Cor
-        </NavLink>
+          <li className="nav-item">
+            <NavLink to="/cor" className={linkClass} onClick={closeMenu}>
+              Cor
+            </NavLink>
+          </li>
 
-        <NavLink to="/nor" className={linkClass} onClick={closeMenu}>
-          Nor
-        </NavLink>
+          <li className="nav-item">
+            <NavLink to="/nor" className={linkClass} onClick={closeMenu}>
+              Nor
+            </NavLink>
+          </li>
 
-        <NavLink to="/pet" className={linkClass} onClick={closeMenu}>
-          Pet
-        </NavLink>
+          <li className="nav-item">
+            <NavLink to="/pet" className={linkClass} onClick={closeMenu}>
+              Pet
+            </NavLink>
+          </li>
 
-        <NavLink to="/admin" className={linkClass} onClick={closeMenu}>
-          Admin
-        </NavLink>
+          <li className="nav-item">
+            <NavLink to="/admin" className={linkClass} onClick={closeMenu}>
+              ⚙️ Admin
+            </NavLink>
+          </li>
 
+        </ul>
       </div>
     </nav>
   );
