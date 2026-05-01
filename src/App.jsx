@@ -11,7 +11,7 @@ function App() {
 
   const regiones = ["Cor", "Nor", "Pet"];
 
-  // reloj
+  // 🕒 reloj
   useEffect(() => {
     const intervalo = setInterval(() => setHora(new Date()), 1000);
     return () => clearInterval(intervalo);
@@ -19,14 +19,12 @@ function App() {
 
   // 🚦 SOLO ROJO
   const getSemaforo = (restante) => {
-  const r = Number(restante);
+    const r = Number(restante);
+    if (r < 500) return { color: "danger", texto: "URGENTE" };
+    return null;
+  };
 
-  // Solo devuelve estado si está estrictamente menor a 500
-  if (r < 500) return { color: "danger", texto: "URGENTE" };
-  return null; // todo lo demás se ignora
-};
-
-  // 🔥 CARGA
+  // 🔥 CARGA DE DATOS
   useEffect(() => {
     const listeners = [];
 
@@ -40,8 +38,7 @@ function App() {
           ? Object.values(data)
               .map((item) => {
                 const estado = getSemaforo(item.restante);
-
-                if (!estado) return null; // ❌ descarta no rojos
+                if (!estado) return null;
 
                 return {
                   ...item,
@@ -49,7 +46,7 @@ function App() {
                   estado,
                 };
               })
-              .filter(Boolean) // limpia null
+              .filter(Boolean)
           : [];
 
         setAlertas((prev) => {
@@ -64,11 +61,16 @@ function App() {
     return () => listeners.forEach((u) => u && u());
   }, []);
 
-  // filtro por región (ya solo hay rojos)
+  // 🔍 FILTRO POR REGIÓN
   const alertasFiltradas =
     regionActiva === "TODAS"
       ? alertas
       : alertas.filter((a) => a.region === regionActiva);
+
+  // 🔽 ORDENAR DE MENOR A MAYOR (CLAVE)
+  const alertasOrdenadas = [...alertasFiltradas].sort(
+    (a, b) => Number(a.restante) - Number(b.restante)
+  );
 
   return (
     <div className="container text-center mt-5">
@@ -84,7 +86,7 @@ function App() {
         </div>
       </div>
 
-      {/* ALERTAS */}
+      {/* 🚨 ALERTAS */}
       <div className="mt-5">
         <h4>🚨 KILOMETRAJES URGENTES</h4>
 
@@ -111,13 +113,13 @@ function App() {
 
         </div>
 
-        {alertasFiltradas.length === 0 ? (
+        {alertasOrdenadas.length === 0 ? (
           <p className="text-muted mt-3">
             No hay unidades urgentes por el momento 🔴
           </p>
         ) : (
           <div className="table-responsive mt-3">
-            <table className="table table-bordered text-center">
+            <table className="table table-bordered table-hover text-center align-middle">
               <thead className="table-dark">
                 <tr>
                   <th>Región</th>
@@ -131,14 +133,14 @@ function App() {
               </thead>
 
               <tbody>
-                {alertasFiltradas.map((r, i) => (
+                {alertasOrdenadas.map((r, i) => (
                   <tr key={i} className="table-danger">
                     <td>{r.region}</td>
                     <td>{r.placa}</td>
                     <td>{r.supervisor}</td>
                     <td>{r.kmInicial}</td>
                     <td>{r.kmServicio}</td>
-                    <td>{r.restante}</td>
+                    <td className="fw-bold text-danger">{r.restante}</td>
                     <td>
                       <span className="badge bg-danger">URGENTE</span>
                     </td>

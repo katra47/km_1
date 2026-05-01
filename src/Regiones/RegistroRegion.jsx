@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { ref, set, onValue, push } from "firebase/database";
+import { ref, onValue } from "firebase/database";
+
+import {
+  getSemaforo,
+  validarActualizacion,
+  actualizarPlacaDB,
+} from "./actualizacionDatos";
 
 // 🔥 Normaliza regiones
 const normalizarRegion = (region) => {
@@ -12,12 +18,19 @@ const normalizarRegion = (region) => {
   return mapa[region?.toLowerCase()] || region;
 };
 
+// 🕒 Formatear fecha
+const formatearFecha = (fecha) => {
+  if (!fecha) return "-";
+  return new Date(fecha).toLocaleString("es-GT");
+};
+
 function RegistroRegion({ nombreRegion }) {
   const REGION = normalizarRegion(nombreRegion);
 
   const [registros, setRegistros] = useState([]);
   const [modo, setModo] = useState("");
   const [error, setError] = useState("");
+  const [confirmar, setConfirmar] = useState(false);
 
   const [placaBuscar, setPlacaBuscar] = useState("");
   const [editor, setEditor] = useState("");
@@ -25,17 +38,6 @@ function RegistroRegion({ nombreRegion }) {
   const [nuevoServicio, setNuevoServicio] = useState("");
 
   const [busqueda, setBusqueda] = useState("");
-
-  // 🚦 SEMÁFORO
-  const getSemaforo = (restante) => {
-    const r = Number(restante);
-
-    if (r <= 500) return { color: "danger", texto: "URGENTE" };
-    if (r <= 1000) return { color: "warning", texto: "PRÓXIMO" };
-    return { color: "success", texto: "OK" };
-  };
-
-  const obtenerFecha = () => new Date().toISOString();
 
   // 🔄 TIEMPO REAL
   useEffect(() => {
@@ -74,81 +76,55 @@ function RegistroRegion({ nombreRegion }) {
     );
   });
 
-  // 🔥 ACTUALIZAR
-  const actualizarPlaca = () => {
+  // 🔥 PREPARAR ACTUALIZACIÓN
+  const prepararActualizacion = () => {
     const placa = placaBuscar.trim().toUpperCase();
     const editorLimpio = editor.trim();
-    const kmDiaNum = Number(kmDia);
 
-    if (!placa || !editorLimpio || !kmDia) {
-      setError("Todos los campos son obligatorios");
-      return;
-    }
-
-    if (isNaN(kmDiaNum) || kmDiaNum < 0) {
-      setError("El km del día debe ser válido");
-      return;
-    }
-
-    const existe = registros.find((r) => r.placa === placa);
-
-    if (!existe) {
-      setError("La placa no está registrada");
-      return;
-    }
-
-    const kmActual = Number(existe.kmInicial);
-    const kmServicioActual = Number(existe.kmServicio);
-
-    if (kmDiaNum < kmActual) {
-      setError("El km del día no puede ser menor al actual");
-      return;
-    }
-
-    let kmServicioFinal = kmServicioActual;
-
-    if (nuevoServicio) {
-      const nuevoServicioNum = Number(nuevoServicio);
-
-      if (isNaN(nuevoServicioNum) || nuevoServicioNum < 0) {
-        setError("El km de servicio debe ser válido");
-        return;
-      }
-
-      if (nuevoServicioNum < kmServicioActual) {
-        setError("El km de servicio no puede ser menor al actual");
-        return;
-      }
-
-      kmServicioFinal = nuevoServicioNum;
-    }
-
-    const restante = kmServicioFinal - kmDiaNum;
-
-    const data = {
-      supervisor: existe.supervisor,
+    const errorValidacion = validarActualizacion({
       placa,
       editor: editorLimpio,
-      kmInicial: kmDiaNum,
-      kmServicio: kmServicioFinal,
-      restante,
-      fecha: obtenerFecha(),
-    };
+      kmDia,
+      existe: placaEncontrada,
+      nuevoServicio,
+    });
 
-    set(ref(db, `registros/${REGION}/${placa}`), data);
-    push(ref(db, `historial/${placa}`), data);
+    if (errorValidacion) {
+      setError(errorValidacion);
+      return;
+    }
 
+    setError("");
+    setConfirmar(true);
+  };
+
+  // 🔥 CONFIRMAR ACTUALIZACIÓN
+  const confirmarActualizacion = () => {
+    const placa = placaBuscar.trim().toUpperCase();
+    const editorLimpio = editor.trim();
+
+    actualizarPlacaDB({
+      REGION,
+      existe: placaEncontrada,
+      placa,
+      editor: editorLimpio,
+      kmDia,
+      nuevoServicio,
+    });
+
+    // limpiar
     setPlacaBuscar("");
     setEditor("");
     setKmDia("");
     setNuevoServicio("");
     setModo("");
+    setConfirmar(false);
     setError("");
   };
 
   return (
-    <div className="container mt-5">
-      <div className="card shadow-lg p-4 rounded-4">
+    <div className="container-fluid p-4">
+      <div>
 
         {/* HEADER */}
         <div className="d-flex justify-content-between align-items-center mb-4">
@@ -158,20 +134,20 @@ function RegistroRegion({ nombreRegion }) {
 
         {/* BOTÓN */}
         <button
-          className="btn btn-primary w-100 mb-4 rounded-3 fw-semibold shadow-sm"
+          className="btn btn-primary w-100 mb-4"
           onClick={() => setModo("actualizar")}
         >
           Actualizar KM
         </button>
 
-        {/* MODAL */}
+        {/* MODAL FORM */}
         {modo && (
           <div
             className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex justify-content-center align-items-center"
             onClick={() => setModo("")}
           >
             <div
-              className="card p-4 rounded-4 shadow-lg"
+              className="card p-4"
               style={{ maxWidth: "400px", width: "100%" }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -180,7 +156,7 @@ function RegistroRegion({ nombreRegion }) {
               {error && <div className="alert alert-danger">{error}</div>}
 
               <input
-                className="form-control mb-3 rounded-3"
+                className="form-control mb-3"
                 placeholder="Placa"
                 value={placaBuscar}
                 onChange={(e) => setPlacaBuscar(e.target.value)}
@@ -194,14 +170,14 @@ function RegistroRegion({ nombreRegion }) {
               )}
 
               <input
-                className="form-control mb-3 rounded-3"
+                className="form-control mb-3"
                 placeholder="Ingrese su Nombre"
                 value={editor}
                 onChange={(e) => setEditor(e.target.value)}
               />
 
               <input
-                className="form-control mb-3 rounded-3"
+                className="form-control mb-3"
                 type="number"
                 placeholder="Km del día"
                 value={kmDia}
@@ -209,7 +185,7 @@ function RegistroRegion({ nombreRegion }) {
               />
 
               <input
-                className="form-control mb-3 rounded-3"
+                className="form-control mb-3"
                 type="number"
                 placeholder="Nuevo Km Servicio (opcional)"
                 value={nuevoServicio}
@@ -217,36 +193,86 @@ function RegistroRegion({ nombreRegion }) {
               />
 
               <button
-                className="btn btn-primary w-100 rounded-3 fw-semibold"
-                onClick={actualizarPlaca}
+                className="btn btn-primary w-100"
+                onClick={prepararActualizacion}
                 disabled={!placaEncontrada}
               >
-                Actualizar
+                Continuar
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CONFIRMACIÓN */}
+        {confirmar && (
+          <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex justify-content-center align-items-center">
+            <div className="card p-4" style={{ maxWidth: "400px", width: "100%" }}>
+              <h5 className="text-danger">⚠️ Confirmar actualización</h5>
+
+              <p><strong>Placa:</strong> {placaBuscar}</p>
+              <p><strong>Editor:</strong> {editor}</p>
+              <p><strong>Km actual ingresado:</strong> {kmDia}</p>
+
+              {nuevoServicio ? (
+                <>
+                  <p className="text-warning">
+                    <strong>⚠️ Nuevo Km de servicio:</strong> {nuevoServicio}
+                  </p>
+
+                  {placaEncontrada && (
+                    <p className="text-warning">
+                      <strong>Cambio:</strong> {placaEncontrada.kmServicio} → {nuevoServicio}
+                    </p>
+                  )}
+
+                  <div className="alert alert-warning mt-2">
+                    ⚠️ Estás modificando el Km de servicio. Verifica que sea correcto.
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted">Km de servicio: sin cambios</p>
+              )}
+
+              <div className="d-flex gap-2 mt-3">
+                <button
+                  className="btn btn-secondary w-50"
+                  onClick={() => setConfirmar(false)}
+                >
+                  Editar
+                </button>
+
+                <button
+                  className="btn btn-danger w-50"
+                  onClick={confirmarActualizacion}
+                >
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* BUSCADOR */}
         <input
-          className="form-control mb-4 rounded-3 shadow-sm"
-          placeholder="🔍 Buscar placa, supervisor o editor..."
+          className="form-control mb-4"
+          placeholder="🔍 Buscar..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
 
         {/* TABLA */}
         <div className="table-responsive">
-          <table className="table table-hover align-middle text-center">
+          <table className="table table-hover text-center">
             <thead className="table-dark">
               <tr>
                 <th>Supervisor</th>
                 <th>Placa</th>
                 <th>Brigada</th>
-                <th>Km Actual</th>
-                <th>Km Servicio</th>
+                <th>Km</th>
+                <th>Servicio</th>
                 <th>Restante</th>
                 <th>Estado</th>
+                <th>Actualización</th>
               </tr>
             </thead>
 
@@ -258,17 +284,18 @@ function RegistroRegion({ nombreRegion }) {
 
                   return (
                     <tr key={i}>
-                      <td className="py-3">{r.supervisor}</td>
-                      <td className="py-3 fw-semibold">{r.placa}</td>
-                      <td className="py-3">{r.editor || "-"}</td>
-                      <td className="py-3">{r.kmInicial}</td>
-                      <td className="py-3">{r.kmServicio}</td>
-                      <td className="py-3 fw-bold">{r.restante}</td>
-                      <td className="py-3">
-                        <span className={`badge bg-${estado.color} px-3 py-2`}>
+                      <td>{r.supervisor}</td>
+                      <td>{r.placa}</td>
+                      <td>{r.editor || "-"}</td>
+                      <td>{r.kmInicial}</td>
+                      <td>{r.kmServicio}</td>
+                      <td>{r.restante}</td>
+                      <td>
+                        <span className={`badge bg-${estado.color}`}>
                           {estado.texto}
                         </span>
                       </td>
+                      <td>{formatearFecha(r.fecha)}</td>
                     </tr>
                   );
                 })}
