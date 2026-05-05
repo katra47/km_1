@@ -15,6 +15,25 @@ export const getSemaforo = (restante) => {
   return "OK";
 };
 
+// 🧠 GUARDAR HISTORIAL
+export const guardarHistorial = async ({
+  placa,
+  supervisor,
+  editor,
+  kmInicial,
+  kmServicio,
+  restante
+}) => {
+  await push(ref(db, `historial/${placa}`), {
+    supervisor,
+    editor: editor || "SISTEMA",
+    kmInicial,
+    kmServicio,
+    restante,
+    fecha: new Date().toISOString(),
+  });
+};
+
 // 🚗 CREAR
 export const crearPlacaDB = async ({
   region,
@@ -51,7 +70,6 @@ export const crearPlacaDB = async ({
 
   await set(refPlaca, data);
 
-  // guardar historial
   await guardarHistorial({
     placa: placaUpper,
     supervisor,
@@ -59,6 +77,35 @@ export const crearPlacaDB = async ({
     kmInicial: kmI,
     kmServicio: kmS,
     restante: kmS - kmI
+  });
+};
+
+// ✏️ CAMBIAR SUPERVISOR (NUEVO)
+export const actualizarSupervisorDB = async ({
+  region,
+  placa,
+  nuevoSupervisor
+}) => {
+
+  const placaUpper = placa.trim().toUpperCase();
+
+  if (!placaUpper || !nuevoSupervisor) {
+    throw new Error("Datos incompletos");
+  }
+
+  const refPlaca = ref(db, `registros/${region}/${placaUpper}`);
+  const snap = await get(refPlaca);
+
+  if (!snap.exists()) {
+    throw new Error("La placa no existe");
+  }
+
+  const dataActual = snap.val();
+
+  await set(refPlaca, {
+    ...dataActual,
+    supervisor: nuevoSupervisor,
+    fecha: new Date().toISOString(),
   });
 };
 
@@ -75,7 +122,7 @@ export const descargarExcelDB = async () => {
       datos.push({
         Placa: placa,
         Supervisor: r.supervisor,
-        Editor: r.editor,
+        Brigada: r.editor,
         Km: r.kmInicial,
         Servicio: r.kmServicio,
         Restante: r.restante,
@@ -107,44 +154,23 @@ export const obtenerHistorialPlaca = async (placa) => {
     estado: getSemaforo(r.restante)
   }));
 
+  // ordenar por fecha DESC
   lista.sort((a, b) =>
-    new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime()
+    new Date(b.fecha || 0) - new Date(a.fecha || 0)
   );
 
   return lista;
 };
 
-// 🧠 HISTORIAL
-export const guardarHistorial = async ({
-  placa,
-  supervisor,
-  editor,
-  kmInicial,
-  kmServicio,
-  restante
-}) => {
-
-  await push(ref(db, `historial/${placa}`), {
-    supervisor,
-    editor,
-    kmInicial,
-    kmServicio,
-    restante,
-    fecha: new Date().toISOString(),
-  });
-};
-
-// 🗑️ ELIMINAR COMPLETO
+// 🗑️ ELIMINAR
 export const eliminarPlacaDB = async (placa) => {
 
   const placaUpper = placa.trim().toUpperCase();
 
   if (!placaUpper) throw new Error("Placa inválida");
 
-  // eliminar historial
   await remove(ref(db, `historial/${placaUpper}`));
 
-  // buscar en regiones
   const regsSnap = await get(ref(db, "registros"));
 
   if (regsSnap.exists()) {

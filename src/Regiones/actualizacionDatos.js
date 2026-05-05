@@ -1,5 +1,3 @@
-// src/Regiones/actualizacionDatos.js
-
 import { db } from "../firebase";
 import { ref, set, push } from "firebase/database";
 
