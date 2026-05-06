@@ -50,11 +50,6 @@ export const validarActualizacion = ({
     return "El km del día no puede ser menor al actual";
   }
 
-  // ⚠️ alerta de salto sospechoso
-  if (kmDiaNum - kmActual > 2000) {
-    return "⚠️ El km ingresado es demasiado alto, revisa";
-  }
-
   if (nuevoServicio) {
     const nuevoServicioNum = Number(nuevoServicio);
 
