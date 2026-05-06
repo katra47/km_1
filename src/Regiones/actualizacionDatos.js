@@ -51,7 +51,7 @@ export const validarActualizacion = ({
   }
 
   // ⚠️ alerta de salto sospechoso
-  if (kmDiaNum - kmActual > 1000) {
+  if (kmDiaNum - kmActual > 2000) {
     return "⚠️ El km ingresado es demasiado alto, revisa";
   }
 
