@@ -79,7 +79,7 @@ function RegistroRegion({ nombreRegion }) {
   // 🔥 PREPARAR ACTUALIZACIÓN
   const prepararActualizacion = () => {
     const placa = placaBuscar.trim().toUpperCase();
-    const editorLimpio = editor.trim();
+    const editorLimpio = editor.trim().toUpperCase();
 
     const errorValidacion = validarActualizacion({
       placa,
@@ -101,7 +101,7 @@ function RegistroRegion({ nombreRegion }) {
   // 🔥 CONFIRMAR ACTUALIZACIÓN
   const confirmarActualizacion = () => {
     const placa = placaBuscar.trim().toUpperCase();
-    const editorLimpio = editor.trim();
+    const editorLimpio = editor.trim().toUpperCase();
 
     actualizarPlacaDB({
       REGION,
@@ -173,7 +173,7 @@ function RegistroRegion({ nombreRegion }) {
                 className="form-control mb-3"
                 placeholder="Ingrese su Nombre"
                 value={editor}
-                onChange={(e) => setEditor(e.target.value)}
+                onChange={(e) => setEditor(e.target.value.toUpperCase())}
               />
 
               <input
