@@ -5,7 +5,8 @@ import {
   descargarExcelDB,
   obtenerHistorialPlaca,
   eliminarPlacaDB,
-  actualizarSupervisorDB
+  actualizarSupervisorDB,
+  corregirKilometrajeDB
 } from "./Admin";
 
 export default function Admin() {
@@ -28,6 +29,11 @@ export default function Admin() {
 
   const [placaEliminar, setPlacaEliminar] = useState("");
   const [nuevoSupervisor, setNuevoSupervisor] = useState("");
+
+  const [placaCorregir, setPlacaCorregir] = useState("");
+  const [kmCorregido, setKmCorregido] = useState("");
+  const [servicioCorregido, setServicioCorregido] = useState("");
+  const [motivoCorreccion, setMotivoCorreccion] = useState("");
 
   // 🔐 LOGIN
   const login = () => {
@@ -57,6 +63,45 @@ export default function Admin() {
     }
   };
 
+  // 🔧 CORREGIR KM DESDE ADMIN
+const corregirKM = async () => {
+  const placaUpper = placaCorregir.trim().toUpperCase();
+
+  if (!placaUpper || kmCorregido === "") {
+    setErrorGeneral("Ingrese placa y kilometraje corregido");
+    return;
+  }
+
+  const confirmar = window.confirm(
+    `¿Confirmar corrección administrativa?\n\nPlaca: ${placaUpper}\nNuevo KM actual: ${kmCorregido}\nKm servicio: ${
+      servicioCorregido || "Sin cambios"
+    }\n\nEsta acción quedará registrada en el historial.`
+  );
+
+  if (!confirmar) return;
+
+  try {
+    setErrorGeneral("");
+
+    await corregirKilometrajeDB({
+      region,
+      placa: placaUpper,
+      kmInicial: kmCorregido,
+      kmServicio: servicioCorregido,
+      motivo: motivoCorreccion,
+    });
+
+    alert("Kilometraje corregido correctamente");
+
+    setPlacaCorregir("");
+    setKmCorregido("");
+    setServicioCorregido("");
+    setMotivoCorreccion("");
+  } catch (e) {
+    setErrorGeneral(e.message);
+  }
+};
+
   // ✏️ CAMBIAR SUPERVISOR
   const cambiarSupervisor = async () => {
     try {
@@ -77,6 +122,9 @@ export default function Admin() {
       setErrorGeneral(e.message);
     }
   };
+
+
+
 
   // 🗑️ ELIMINAR
   const eliminar = async () => {
@@ -255,6 +303,79 @@ export default function Admin() {
           </div>
         </div>
       </div>
+
+        {/* 🔧 CORREGIR KILOMETRAJE */}
+<div className="card p-4 mb-4 border-info">
+  <h5 className="text-info">Corrección Administrativa de KM</h5>
+
+  <p className="text-muted mb-3">
+    Use esta opción solo cuando una brigada haya ingresado un kilometraje incorrecto.
+    Esta corrección permite ingresar un KM menor al último registrado.
+  </p>
+
+  <div className="row g-2">
+    <div className="col-md-2">
+      <select
+        className="form-select"
+        value={region}
+        onChange={e => setRegion(e.target.value)}
+      >
+        <option value="Cor">Cor</option>
+        <option value="Nor">Nor</option>
+        <option value="Pet">Pet</option>
+      </select>
+    </div>
+
+    <div className="col-md-2">
+      <input
+        className="form-control"
+        placeholder="Placa"
+        value={placaCorregir}
+        onChange={e => setPlacaCorregir(e.target.value)}
+      />
+    </div>
+
+    <div className="col-md-2">
+      <input
+        type="number"
+        className="form-control"
+        placeholder="KM corregido"
+        value={kmCorregido}
+        onChange={e => setKmCorregido(e.target.value)}
+      />
+    </div>
+
+    <div className="col-md-2">
+      <input
+        type="number"
+        className="form-control"
+        placeholder="Km Servicio opcional"
+        value={servicioCorregido}
+        onChange={e => setServicioCorregido(e.target.value)}
+      />
+    </div>
+
+    <div className="col-md-3">
+      <input
+        className="form-control"
+        placeholder="Motivo de corrección"
+        value={motivoCorreccion}
+        onChange={e => setMotivoCorreccion(e.target.value)}
+      />
+    </div>
+
+    <div className="col-md-1">
+      <button
+        className="btn btn-info w-100"
+        onClick={corregirKM}
+      >
+        Corregir
+      </button>
+    </div>
+  </div>
+</div>
+
+
 
       {/* 🗑️ ELIMINAR */}
       <div className="card p-4 mb-4 border-danger">

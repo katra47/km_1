@@ -2,6 +2,7 @@ import { db } from "../firebase";
 import { ref, set, get, push, remove } from "firebase/database";
 import * as XLSX from "xlsx";
 
+
 // 🔐 PASSWORD
 export const verificarPassword = (password) => {
   return password === "Stcomadmin26";
@@ -79,6 +80,71 @@ export const crearPlacaDB = async ({
     restante: kmS - kmI
   });
 };
+
+// 🔧 CORREGIR KILOMETRAJE ACTUAL DESDE ADMIN
+export const corregirKilometrajeDB = async ({
+  region,
+  placa,
+  kmInicial,
+  kmServicio,
+  motivo
+}) => {
+  const placaUpper = placa.trim().toUpperCase();
+
+  if (!region || !placaUpper || kmInicial === "") {
+    throw new Error("Ingrese región, placa y kilometraje actual");
+  }
+
+  const kmI = Number(kmInicial);
+
+  if (isNaN(kmI) || kmI < 0) {
+    throw new Error("El kilometraje actual debe ser válido");
+  }
+
+  const refPlaca = ref(db, `registros/${region}/${placaUpper}`);
+  const snap = await get(refPlaca);
+
+  if (!snap.exists()) {
+    throw new Error("La placa no existe en esta región");
+  }
+
+  const dataActual = snap.val();
+
+  let kmServicioFinal = Number(dataActual.kmServicio);
+
+  if (kmServicio !== "") {
+    const kmS = Number(kmServicio);
+
+    if (isNaN(kmS) || kmS < 0) {
+      throw new Error("El kilometraje de servicio debe ser válido");
+    }
+
+    kmServicioFinal = kmS;
+  }
+
+  const restante = kmServicioFinal - kmI;
+
+  const dataNueva = {
+    ...dataActual,
+    kmInicial: kmI,
+    kmServicio: kmServicioFinal,
+    restante,
+    fecha: new Date().toISOString(),
+  };
+
+  await set(refPlaca, dataNueva);
+
+  await push(ref(db, `historial/${placaUpper}`), {
+    supervisor: dataActual.supervisor,
+    editor: "ADMIN - CORRECCIÓN",
+    kmInicial: kmI,
+    kmServicio: kmServicioFinal,
+    restante,
+    motivo: motivo || "Corrección administrativa",
+    fecha: new Date().toISOString(),
+  });
+};
+
 
 // ✏️ CAMBIAR SUPERVISOR (NUEVO)
 export const actualizarSupervisorDB = async ({
@@ -161,6 +227,8 @@ export const obtenerHistorialPlaca = async (placa) => {
 
   return lista;
 };
+
+
 
 // 🗑️ ELIMINAR
 export const eliminarPlacaDB = async (placa) => {
