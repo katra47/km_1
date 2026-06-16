@@ -12,6 +12,7 @@ import Nor from './Regiones/Nor.jsx'
 import Pet from './Regiones/Pet.jsx'
 import NavBar from './NavBar.jsx'
 import Admin from './Regiones/Admin.jsx' // 🔥 IMPORTANTE
+import Ia from './IA/Ia.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/nor" element={<Nor />} />
         <Route path="/pet" element={<Pet />} />
         <Route path="/admin" element={<Admin />} /> {/* 🔐 protegido */}
+        <Route path="/ia" element={<Ia />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   verificarPassword,
   crearPlacaDB,
@@ -176,6 +177,7 @@ const corregirKM = async () => {
       <div className="container vh-100 d-flex align-items-center justify-content-center">
         <div className="card shadow p-4" style={{ width: "350px" }}>
           <h4 className="text-center mb-3">🔒 Acceso Admin</h4>
+          
 
           {errorGeneral && (
             <div className="alert alert-danger">{errorGeneral}</div>
@@ -202,6 +204,11 @@ const corregirKM = async () => {
       {/* 🧾 FORMULARIO */}
       <div className="card p-4 mb-4 shadow">
         <h4 className="text-center mb-3">Panel Admin</h4>
+        <div className="text-center mb-3">
+            <Link to="/ia" className="btn btn-primary">
+            🤖 Ir a Consulta IA
+            </Link>
+          </div>
 
         {errorGeneral && (
           <div className="alert alert-danger">{errorGeneral}</div>
